@@ -6,8 +6,10 @@ SHADER_DIR="${HOME}/.config/ghostty/shaders"
 CONFIG_FILE="${SHADER_DIR}/variant.conf"
 
 ACCENT_IDX=6
+CUSTOM_COLOR=""
 if [[ -f "$CONFIG_FILE" ]]; then
   ACCENT_IDX=$(sed -n 's/^ACCENT_IDX=//p' "$CONFIG_FILE" | tail -1)
+  CUSTOM_COLOR=$(sed -n 's/^CUSTOM_COLOR=//p' "$CONFIG_FILE" | tail -1)
 fi
 ACCENT_IDX="${ACCENT_IDX:-6}"
 [[ "$ACCENT_IDX" =~ ^[0-9]+$ ]] || ACCENT_IDX=6
@@ -28,6 +30,22 @@ get_palette() {
   echo "$hex"
 }
 
+# Prefer a fixed vivid color if set, else derive from the theme palette.
+ACCENT_HEX=""
+if [[ -n "$CUSTOM_COLOR" ]]; then
+  ACCENT_HEX="${CUSTOM_COLOR#\#}"
+  if [[ ${#ACCENT_HEX} -eq 3 ]]; then
+    ACCENT_HEX="${ACCENT_HEX:0:1}${ACCENT_HEX:0:1}${ACCENT_HEX:1:1}${ACCENT_HEX:1:1}${ACCENT_HEX:2:1}${ACCENT_HEX:2:1}"
+  fi
+  [[ ${#ACCENT_HEX} -eq 6 ]] || ACCENT_HEX=""
+fi
+if [[ -z "$ACCENT_HEX" ]]; then
+  ACCENT_HEX=$(get_palette "$ACCENT_IDX") || {
+    echo "Palette index $ACCENT_IDX missing in $THEME_FILE" >&2
+    exit 1
+  }
+fi
+
 hex_to_vec() {
   local h="$1" clr="$2" dr dg db r g b
   dr=$((16#${h:0:2})); dg=$((16#${h:2:2})); db=$((16#${h:4:2}))
@@ -41,10 +59,6 @@ hex_to_vec() {
   printf "vec4(%d.0, %d.0, %d.0, 1.0)" "$r" "$g" "$b"
 }
 
-ACCENT_HEX=$(get_palette "$ACCENT_IDX") || {
-  echo "Palette index $ACCENT_IDX missing in $THEME_FILE" >&2
-  exit 1
-}
 ACCENT=$(hex_to_vec "$ACCENT_HEX" "")
 ACCENT_LIGHT=$(hex_to_vec "$ACCENT_HEX" lighten)
 
@@ -64,4 +78,8 @@ if [[ $PATCHED -eq 0 ]]; then
   exit 1
 fi
 
-echo "Done. Theme accent #$ACCENT_HEX (palette $ACCENT_IDX) applied to $PATCHED shader(s)."
+if [[ -n "$CUSTOM_COLOR" ]]; then
+  echo "Done. Custom color #$ACCENT_HEX applied to $PATCHED shader(s)."
+else
+  echo "Done. Theme accent #$ACCENT_HEX (palette $ACCENT_IDX) applied to $PATCHED shader(s)."
+fi
