@@ -103,13 +103,12 @@ float determineStartVertexFactor(vec2 a, vec2 b) {
     return 1.0 - max(condition1, condition2);
 }
 
-vec3 hsv2rgb(vec3 c){vec3 p=abs(fract(c.xxx+vec3(0.,2./3.,1./3.))*6.-3.);return mix(vec3(1.),clamp(p-1.,0.,1.),c.y)*c.z;}
-#define TRAIL_COLOR vec4(hsv2rgb(vec3(fract(iTime*0.40),0.90,1.00)), 1.0)
-#define TRAIL_COLOR_ACCENT vec4(hsv2rgb(vec3(fract(iTime*0.40+0.05),0.90,1.00)), 1.0)
+const vec4 TRAIL_COLOR = vec4(1.0, 0.725, 0.161, 1.0);
+const vec4 TRAIL_COLOR_ACCENT = vec4(1.0, 0., 0., 1.0);
 // const vec4 TRAIL_COLOR = vec4(0.482, 0.886, 1.0, 1.0);
 // const vec4 TRAIL_COLOR_ACCENT = vec4(0.0, 0.424, 1.0, 1.0);
-#define CURRENT_CURSOR_COLOR TRAIL_COLOR
-#define PREVIOUS_CURSOR_COLOR TRAIL_COLOR
+const vec4 CURRENT_CURSOR_COLOR = TRAIL_COLOR;
+const vec4 PREVIOUS_CURSOR_COLOR = TRAIL_COLOR;
 const float DURATION = 0.3;
 
 void mainImage(out vec4 fragColor, in vec2 fragCoord)

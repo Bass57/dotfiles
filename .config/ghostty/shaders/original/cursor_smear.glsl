@@ -60,12 +60,13 @@ float ease(float x) {
     return pow(1.0 - x, 3.0);
 }
 
-vec3 hsv2rgb(vec3 c){vec3 p=abs(fract(c.xxx+vec3(0.,2./3.,1./3.))*6.-3.);return mix(vec3(1.),clamp(p-1.,0.,1.),c.y)*c.z;}
-#define TRAIL_COLOR vec4(hsv2rgb(vec3(fract(iTime*0.40),0.90,1.00)), 1.0)
-const float DURATION = 0.5; //IN SECONDS
+const vec4 TRAIL_COLOR = vec4(1., 1., 0., 1.0);
+const float OPACITY = 0.6;
+const float DURATION = 0.3; //IN SECONDS
 
 void mainImage(out vec4 fragColor, in vec2 fragCoord)
 {
+
     #if !defined(WEB)
     fragColor = texture(iChannel0, fragCoord.xy / iResolution.xy);
     #endif
@@ -100,16 +101,11 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)
     float lineLength = distance(centerCC, centerCP);
 
     vec4 newColor = vec4(fragColor);
-    // Compute fade factor based on distance along the trail
-    float fadeFactor = 1.0 - smoothstep(lineLength, sdfCurrentCursor, easedProgress * lineLength);
-
-    // Apply fading effect to trail color
-    vec4 fadedTrailColor = TRAIL_COLOR * fadeFactor;
-
-    // Blend trail with fade effect
-    newColor = mix(newColor, fadedTrailColor, antialising(sdfTrail));
+    // Draw trail
+    newColor = mix(newColor, TRAIL_COLOR, antialising(sdfTrail));
     // Draw current cursor
     newColor = mix(newColor, TRAIL_COLOR, antialising(sdfCurrentCursor));
     newColor = mix(newColor, fragColor, step(sdfCurrentCursor, 0.));
+    // newColor = mix(fragColor, newColor, OPACITY);
     fragColor = mix(fragColor, newColor, step(sdfCurrentCursor, easedProgress * lineLength));
 }

@@ -53,15 +53,22 @@ git -C ~/dotfiles push
   - `shaders/cursor_blaze_no_trail.glsl` — blaze without trail
   - `shaders/cursor_smear_fade.glsl` — fading smear
 - Sources: https://github.com/KroneCorylus/shader-playground (commit `803afa2`)
+  - pristine copies kept in `shaders/original/` so the patch script can reset each run
 
 ### Theme-color sync
 
-`shaders/ghostty-cursor-color.sh` patches the shader colors to match the active
-Omarchy theme — the trail uses the theme **accent** color (`palette` index, default
-6), and the blaze shaders get a lightened accent as their secondary color. The
-accent index is overridable in `shaders/variant.conf` (`ACCENT_IDX=6`); setting
-`CUSTOM_COLOR=#rrggbb` pins a fixed color instead. It is installed as a
-`theme-set` hook
+`shaders/ghostty-cursor-color.sh` patches the shader colors in one of three modes,
+selected in `shaders/variant.conf`:
+
+| Mode | Config | Effect |
+|---|---|---|
+| **Rainbow** | `RAINBOW=1` (default), `RAINBOW_SPEED=0.40` | trail cycles through all neon colors over time |
+| **Fixed color** | `RAINBOW=0` + `CUSTOM_COLOR=#00E5FF` | pins a vivid custom color |
+| **Theme accent** | `RAINBOW=0`, blank `CUSTOM_COLOR` | follows theme `palette` index `ACCENT_IDX=6` |
+
+The blaze shaders get a lightened accent as their secondary color. The script
+resets from the pristine copies in `shaders/original/` before patching, so every
+run is deterministic. It is installed as a `theme-set` hook
 (`~/.config/omarchy/hooks/theme-set.d/ghostty-cursor-color.sh`), so every
 `omarchy theme set` restyles the trail automatically; Ghostty hot-reloads the
 shader files on change. Reinstall after a reset with:
