@@ -32,8 +32,8 @@ B=$(printf "%d" "0x${HEX:4:2}")
 PATCHED=0
 for SHADER_FILE in "$SHADER_DIR"/*.glsl; do
   if grep -q '^const vec4 TRAIL_COLOR' "$SHADER_FILE"; then
-    sed -i "s/^const vec4 TRAIL_COLOR = .*/const vec4 TRAIL_COLOR = vec4(${R}.0, ${G}.0, ${B}.0, 1.0)/" "$SHADER_FILE"
-    echo "Patched $SHADER_FILE -> vec4(${R}.0, ${G}.0, ${B}.0, 1.0)"
+    sed -i "s/^const vec4 TRAIL_COLOR = .*/const vec4 TRAIL_COLOR = vec4(${R}.0, ${G}.0, ${B}.0, 1.0);/" "$SHADER_FILE"
+    echo "Patched $SHADER_FILE -> vec4(${R}.0, ${G}.0, ${B}.0, 1.0);"
     PATCHED=$((PATCHED + 1))
   fi
 done

@@ -60,7 +60,7 @@ float ease(float x) {
     return pow(1.0 - x, 3.0);
 }
 
-const vec4 TRAIL_COLOR = vec4(192.0, 202.0, 245.0, 1.0)
+const vec4 TRAIL_COLOR = vec4(247.0, 251.0, 255.0, 1.0);
 const float OPACITY = 0.6;
 const float DURATION = 0.3; //IN SECONDS
 
