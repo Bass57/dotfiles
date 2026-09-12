@@ -59,8 +59,9 @@ git -C ~/dotfiles push
 `shaders/ghostty-cursor-color.sh` patches the shader colors to match the active
 Omarchy theme — the trail uses the theme **accent** color (`palette` index, default
 6), and the blaze shaders get a lightened accent as their secondary color. The
-accent index can be overridden in `shaders/variant.conf` (`ACCENT_IDX=6`). It is
-installed as a `theme-set` hook
+accent index is overridable in `shaders/variant.conf` (`ACCENT_IDX=6`); setting
+`CUSTOM_COLOR=#rrggbb` pins a fixed color instead. It is installed as a
+`theme-set` hook
 (`~/.config/omarchy/hooks/theme-set.d/ghostty-cursor-color.sh`), so every
 `omarchy theme set` restyles the trail automatically; Ghostty hot-reloads the
 shader files on change. Reinstall after a reset with:
