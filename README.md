@@ -56,11 +56,14 @@ git -C ~/dotfiles push
 
 ### Theme-color sync
 
-`shaders/ghostty-cursor-color.sh` patches the `TRAIL_COLOR` constant in every
-shader to match the active Omarchy theme's `cursor-color`. It is installed as a
-`theme-set` hook (`~/.config/omarchy/hooks/theme-set.d/ghostty-cursor-color.sh`),
-so every `omarchy theme set` restyles the trail automatically; Ghostty hot-reloads
-the shader files on change. Reinstall after a reset with:
+`shaders/ghostty-cursor-color.sh` patches the shader colors to match the active
+Omarchy theme — the trail uses the theme **accent** color (`palette` index, default
+6), and the blaze shaders get a lightened accent as their secondary color. The
+accent index can be overridden in `shaders/variant.conf` (`ACCENT_IDX=6`). It is
+installed as a `theme-set` hook
+(`~/.config/omarchy/hooks/theme-set.d/ghostty-cursor-color.sh`), so every
+`omarchy theme set` restyles the trail automatically; Ghostty hot-reloads the
+shader files on change. Reinstall after a reset with:
 
 ```bash
 omarchy hook install theme-set ~/.config/ghostty/shaders/ghostty-cursor-color.sh
