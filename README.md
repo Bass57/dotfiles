@@ -77,3 +77,14 @@ shader files on change. Reinstall after a reset with:
 omarchy hook install theme-set ~/.config/ghostty/shaders/ghostty-cursor-color.sh
 ~/.config/ghostty/shaders/ghostty-cursor-color.sh   # apply current theme now
 ```
+
+### Neon accent
+
+The neon cyan `#00E5FF` is applied across the setup:
+
+- **opencode TUI**: `.config/opencode/themes/neon.json` (custom `neon` theme; selected in
+  `.config/opencode/tui.json` + `tui.jsonc`), plus neon agent badge colors in
+  `.config/opencode/opencode.json`.
+- **Neovim**: hook `.config/omarchy/hooks/theme-set.d/nvim-neon.sh` re-pins the
+  aether `accent` + `cursor` to `#00E5FF` in the staged neovim.lua after every
+  `omarchy theme set`. Run `:LazyReload` in Neovim to apply.

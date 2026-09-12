@@ -1,0 +1,4 @@
+{
+  "theme": "neon",
+  "plugin": ["./herdr-tui-session.js"]
+}

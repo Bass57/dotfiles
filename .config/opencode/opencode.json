@@ -1,0 +1,12 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "theme": "system",
+  "autoupdate": false,
+  "lsp": true,
+  "agent": {
+    "build": { "color": "#00E5FF" },
+    "plan": { "color": "#55D8FF" },
+    "general": { "color": "#00B8D6" },
+    "explore": { "color": "#83D9F0" }
+  }
+}
