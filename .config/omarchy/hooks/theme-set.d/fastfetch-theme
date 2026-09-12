@@ -1,0 +1,10 @@
+#!/bin/bash
+# Install the FastFetch config rendered from the selected Omarchy theme.
+set -eu
+
+theme_config="$HOME/.local/state/omarchy/current/theme/fastfetch.jsonc"
+target_dir="$HOME/.config/fastfetch"
+
+[[ -f $theme_config ]] || exit 0
+install -d -m 755 "$target_dir"
+install -m 644 "$theme_config" "$target_dir/config.jsonc"

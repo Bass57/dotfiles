@@ -13,10 +13,11 @@ the safety net for when you manually reset something (`omarchy refresh`,
 | Path | What it is |
 |------|-----------|
 | `.config/ghostty/config` | Ghostty config + enabled custom cursor shader |
-| `.config/ghostty/shaders/` | Cursor smear/trail GLSL shaders (KroneCorylus) |
+| `.config/ghostty/shaders/` | Cursor smear/trail GLSL shaders (KroneCorylus) + `ghostty-cursor-color.sh` theme-color sync |
 | `.config/hypr/` | Full Hyprland config (bindings, input, monitors, looknfeel, autostart, hyprsunset, ...) |
 | `.config/nvim/lua/plugins/smear-cursor.lua` | LazyVim spec for `sphamba/smear-cursor.nvim` |
 | `.config/omarchy/plugins/bass.menu/` | Cloned menu plugin (`bass.menu`) incl. scroll-position fix in `Menu.qml` |
+| `.config/omarchy/hooks/theme-set.d/` | Theme hooks (incl. `ghostty-cursor-color.sh`) |
 
 ## Restore
 
@@ -52,3 +53,16 @@ git -C ~/dotfiles push
   - `shaders/cursor_blaze_no_trail.glsl` — blaze without trail
   - `shaders/cursor_smear_fade.glsl` — fading smear
 - Sources: https://github.com/KroneCorylus/shader-playground (commit `803afa2`)
+
+### Theme-color sync
+
+`shaders/ghostty-cursor-color.sh` patches the `TRAIL_COLOR` constant in every
+shader to match the active Omarchy theme's `cursor-color`. It is installed as a
+`theme-set` hook (`~/.config/omarchy/hooks/theme-set.d/ghostty-cursor-color.sh`),
+so every `omarchy theme set` restyles the trail automatically; Ghostty hot-reloads
+the shader files on change. Reinstall after a reset with:
+
+```bash
+omarchy hook install theme-set ~/.config/ghostty/shaders/ghostty-cursor-color.sh
+~/.config/ghostty/shaders/ghostty-cursor-color.sh   # apply current theme now
+```
