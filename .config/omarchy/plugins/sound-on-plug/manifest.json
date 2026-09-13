@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "id": "com.omarchy.sound-on-plug",
+  "name": "Sound on Plug",
+  "version": "1.0.0",
+  "author": "User",
+  "description": "Plays a distinct sound when a device is plugged in or unplugged (user-space udev monitor, no root).",
+  "kinds": [
+    "bar-widget"
+  ],
+  "entryPoints": {
+    "barWidget": "BarWidget.qml"
+  },
+  "barWidget": {
+    "displayName": "Sound on Plug",
+    "description": "Sound on device plug / unplug. Left click previews plug, right click previews unplug. Monitoring runs via the sound-on-plug user service.",
+    "category": "System",
+    "allowMultiple": false,
+    "defaultSection": "left"
+  },
+  "omarchy": {
+    "service": "sound-on-plug.service"
+  }
+}

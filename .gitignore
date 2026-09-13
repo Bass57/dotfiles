@@ -1,2 +1,6 @@
 # backup files created by "omarchy refresh" etc.
 *.bak.*
+
+# app caches / heavy generated assets
+node_modules/
+.config/omarchy/themes/

@@ -1,0 +1,230 @@
+#!/bin/bash
+# Stream a phone camera into a v4l2 loopback node with scrcpy, so it shows up
+# as an ordinary webcam in Meet, Zoom, OBS, and anything else that opens
+# /dev/video*.
+#
+#   dori-camera back | front | off | cycle
+#
+#   --device DEV          loopback node to write into (default /dev/video10)
+#   --back-id N           camera id for "back"  (default 0)
+#   --front-id N          camera id for "front" (default 1)
+#   --back-rotation DEG   0|90|180|270, clockwise, for a sensor that arrives
+#   --front-rotation DEG  rotated or upside down (default 0 for both)
+#   --max-size PX         longest edge, 0 for native (default 1920)
+#   --fps N               capture frame rate (default 30)
+#
+# Requires Android 12 or newer: camera capture is a scrcpy feature that the
+# older platform releases cannot serve.
+
+set -uo pipefail
+
+# shellcheck source=dori-lib.sh
+. "$(dirname "$(readlink -f "$0")")/dori-lib.sh" || exit 1
+
+DEVICE="${DORI_V4L2_DEVICE:-/dev/video10}"
+BACK_ID=0
+FRONT_ID=1
+BACK_ROTATION=0
+FRONT_ROTATION=0
+MAX_SIZE=1920
+FPS=30
+RUNDIR=$(dori_rundir) || exit 1
+MODE=""
+
+LOG="$RUNDIR/camera.log"
+
+while (($# > 0)); do
+  case "$1" in
+    --device) DEVICE="${2:-}"; shift 2 ;;
+    --back-id) BACK_ID="${2:-0}"; shift 2 ;;
+    --front-id) FRONT_ID="${2:-1}"; shift 2 ;;
+    --back-rotation) BACK_ROTATION="${2:-0}"; shift 2 ;;
+    --front-rotation) FRONT_ROTATION="${2:-0}"; shift 2 ;;
+    --max-size) MAX_SIZE="${2:-1920}"; shift 2 ;;
+    --fps) FPS="${2:-30}"; shift 2 ;;
+    -h | --help)
+      sed -n '2,18p' "$0"
+      exit 0
+      ;;
+    -*)
+      echo "dori-camera: unknown flag $1" >&2
+      exit 1
+      ;;
+    *) MODE="$1"; shift ;;
+  esac
+done
+MODE="${MODE:-cycle}"
+
+# With the cable in and Wi-Fi on at the same time, adb sees two devices and
+# every bare adb call fails with "more than one device". Always name one, and
+# prefer the cable: it is the faster transport and the one just plugged in.
+dori_serial() {
+  [[ -n ${DORI_SERIAL:-} ]] && { echo "$DORI_SERIAL"; return 0; }
+  adb devices 2>/dev/null | awk '
+    NR > 1 && $2 == "device" {
+      if ($1 !~ /:/) { print $1; found = 1; exit }
+      if (!wireless) wireless = $1
+    }
+    END { if (!found && wireless) print wireless }'
+}
+
+notify() { command -v notify-send >/dev/null 2>&1 && notify-send "$@"; }
+
+# The camera stream Dori owns is the dori-camera user unit, and nothing else.
+# Another scrcpy writing to a v4l2 sink on this login is not Dori's to stop.
+# The unit's Description remembers which camera is live.
+current_cam() {
+  dori_unit_description camera | grep -oP -- 'camera \K\d+' | head -1
+}
+
+stop_stream() {
+  dori_unit_stop camera
+}
+
+# The loopback node keeps whatever format it negotiated for as long as anybody
+# has it open — the viewfinder included. Leave one running across a restart and
+# scrcpy comes back at 720p into a node still advertising 1080p, so changing the
+# resolution appears to do nothing at all. Drop the viewfinder for the length of
+# the switch and bring it back once there is something to see again.
+VIEW_WAS_UP=0
+
+release_viewfinder() {
+  dori_unit_active view || return 0
+  VIEW_WAS_UP=1
+  dori_unit_stop view
+}
+
+restore_viewfinder() {
+  ((VIEW_WAS_UP)) || return 0
+  VIEW_WAS_UP=0
+  # Backgrounded: dori-view spends a couple of seconds making sure the player
+  # did not exit on the spot, and the camera switch should not wait for that.
+  # It reports its own failures, so nothing is swallowed by doing this.
+  "$(dirname "$(readlink -f "$0")")/dori-view" start --device "$DEVICE" \
+    >/dev/null 2>&1 &
+}
+
+# Whether the unit's scrcpy has the loopback node open. Read-only: the pid is
+# looked at, never signalled, so a recycled pid can at worst delay the answer.
+# The fds are resolved with readlink rather than scraped out of `ls -l`, which
+# would match a device name appearing anywhere in the listing and depends on
+# the listing's format to boot.
+sink_open() {
+  local pid fd
+  pid=$(systemctl --user show "$(dori_unit camera)" -p MainPID --value 2>/dev/null)
+  [[ $pid =~ ^[0-9]+$ && $pid -gt 0 ]] || return 1
+  for fd in /proc/"$pid"/fd/*; do
+    [[ "$(readlink -- "$fd" 2>/dev/null)" == "$DEVICE" ]] && return 0
+  done
+  return 1
+}
+
+require_ready() {
+  if [[ ! -c $DEVICE ]]; then
+    # "Run dori-setup" is only useful advice when the module is not up. When it
+    # is loaded and the node still does not exist, something else on this
+    # machine owns the module — it was loaded with devices=0, or without the
+    # video_nr this expects — and saying so saves a lot of digging.
+    if [[ -d /sys/module/v4l2loopback ]]; then
+      notify -u critical "Dori" \
+        "v4l2loopback is loaded but nothing created $DEVICE. Another tool may own the module; run dori-setup."
+      echo "dori-camera: v4l2loopback is loaded but $DEVICE does not exist;" >&2
+      echo "  another v4l2loopback user may own the module. Run dori-setup," >&2
+      echo "  which adds Dori's own node without disturbing theirs." >&2
+    else
+      notify -u critical "Dori" \
+        "No webcam device at $DEVICE. Run dori-setup once to set up v4l2loopback."
+      echo "dori-camera: $DEVICE is not a character device; run dori-setup" >&2
+    fi
+    exit 1
+  fi
+  if [[ -z "$(dori_serial)" ]]; then
+    notify -u critical "Dori" "No phone over adb. Connect USB and accept the debugging prompt."
+    echo "dori-camera: no adb device in state 'device'" >&2
+    exit 1
+  fi
+}
+
+start_stream() {
+  local cam=$1 label=$2
+  # Each sensor is mounted its own way round, so back and front carry their own
+  # rotation. scrcpy only reads this at launch, which is why changing it has to
+  # restart the stream rather than nudge a live one.
+  local rotate=() degrees=0
+  case "$label" in
+    back) degrees=$BACK_ROTATION ;;
+    front) degrees=$FRONT_ROTATION ;;
+  esac
+  [[ $degrees != "0" ]] && rotate=(--capture-orientation="$degrees")
+
+  require_ready
+  dori_require_user_systemd || exit 1
+  : >"$LOG"
+  dori_unit_start camera "$LOG" "Dori camera $cam ($label) on $DEVICE" \
+    scrcpy -s "$(dori_serial)" --video-source=camera --camera-id="$cam" \
+    --camera-ar=16:9 --max-size="$MAX_SIZE" --max-fps="$FPS" \
+    "${rotate[@]}" \
+    --v4l2-sink="$DEVICE" --no-audio --no-window || {
+    echo "dori-camera: could not start the dori-camera unit" >&2
+    exit 1
+  }
+
+  # scrcpy fails asynchronously — a bad camera id or a busy sink shows up a beat
+  # later, not in the exit code of the launch, and its log is block-buffered
+  # until it exits so there is nothing to read there. The stream is up when
+  # the unit's process has the sink open. Over Wi-Fi that takes several
+  # seconds, so wait for it rather than guessing.
+  local _
+  for _ in {1..24}; do
+    dori_unit_active camera || break
+    sink_open && break
+    sleep 0.4
+  done
+  if ! dori_unit_active camera || ! sink_open; then
+    stop_stream
+    notify -u critical "Dori" "Camera stream failed to start. See $LOG"
+    echo "dori-camera: stream did not come up; see $LOG" >&2
+    exit 1
+  fi
+  notify "Dori" "Streaming the $label camera to $DEVICE"
+}
+
+# Switching cameras means tearing the sink down first: scrcpy holds the node
+# exclusively, so the new stream cannot open it until the old one is gone.
+switch_to() {
+  local cam=$1 label=$2
+  if [[ -n "$(current_cam)" ]]; then
+    release_viewfinder
+    stop_stream
+    sleep 0.3
+  fi
+  start_stream "$cam" "$label"
+  restore_viewfinder
+}
+
+case "$MODE" in
+  off | stop)
+    if [[ -n "$(current_cam)" ]]; then
+      dori_unit_stop view
+      stop_stream
+      notify "Dori" "Camera stream stopped"
+    fi
+    ;;
+  back) switch_to "$BACK_ID" "back" ;;
+  front) switch_to "$FRONT_ID" "front" ;;
+  cycle)
+    case "$(current_cam)" in
+      "") start_stream "$BACK_ID" "back" ;;
+      "$BACK_ID") switch_to "$FRONT_ID" "front" ;;
+      *)
+        dori_unit_stop view
+        stop_stream
+        notify "Dori" "Camera stream stopped"
+        ;;
+    esac
+    ;;
+  *)
+    echo "Usage: dori-camera <back|front|off|cycle> [flags]" >&2
+    exit 1
+    ;;
+esac

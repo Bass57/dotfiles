@@ -1,0 +1,2 @@
+# Play a sound when a device is plugged in
+ACTION=="add", KERNEL=="[h]*", SUBSYSTEM=="usb", RUN+="/home/bass/.config/omarchy/hooks/sound-on-plug"

@@ -1,0 +1,30 @@
+{
+  "$schema": "https://raw.githubusercontent.com/HANCORE-linux/omarchy-plugin-marketplace/main/schema/plugin-manifest.v1.json",
+  "schemaVersion": 1,
+  "id": "kiryuuki.oma-pulse",
+  "name": "OmaPulse",
+  "version": "1.0.0",
+  "author": "Kiryuuki",
+  "license": "Source-Available Non-Commercial (PolyForm-Noncommercial-1.0.0)",
+  "description": "Real-time hardware vitals, per-core CPU load, memory breakdown, GPU compute & VRAM telemetry, network/disk I/O rates, and one-click process triage for Omarchy Quattro.",
+  "kinds": [
+    "bar-widget"
+  ],
+  "entryPoints": {
+    "barWidget": "BarWidget.qml"
+  },
+  "barWidget": {
+    "displayName": "OmaPulse",
+    "description": "Real-time hardware telemetry and resource hog triage",
+    "category": "System",
+    "allowMultiple": false,
+    "defaultSection": "right"
+  },
+  "settings": {
+    "pollIntervalSeconds": {
+      "type": "number",
+      "default": 4,
+      "description": "Background hardware telemetry polling interval in seconds"
+    }
+  }
+}

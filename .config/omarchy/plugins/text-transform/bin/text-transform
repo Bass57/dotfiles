@@ -1,0 +1,114 @@
+#!/usr/bin/env bash
+
+# omarchy:summary=Transform highlighted text and replace it in place
+# omarchy:group=text
+# omarchy:args=[--shift-insert] [--copy-only] [--get-selection] <upcase|downcase|capitalize>
+# omarchy:examples=text-transform capitalize | text-transform capitalize --shift-insert
+# omarchy:hidden=true
+
+set -u
+
+# Resolve the plugin's bin/ directory so the script keeps working wherever the
+# plugin is installed (and through symlinked checkouts during development).
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]:-$0}")" >/dev/null 2>&1 && pwd)"
+TRANSFORM="$SCRIPT_DIR/text-transform.py"
+
+MODE=""
+METHOD="type" # type | shift-insert | copy-only
+GET_SELECTION=false
+
+# Cap on the selection we'll read, and the deadline for each helper process.
+# The selection is whatever the user (or whatever app owns the clipboard) put
+# there, so it's untrusted-sized input; wl-paste/python3/wtype each get a hard
+# timeout with a follow-up SIGKILL so a stuck helper can't hang the picker.
+readonly MAX_BYTES=65536
+readonly HELPER_TIMEOUT=2
+readonly HELPER_KILL_AFTER=1
+run_bounded() { timeout --kill-after="$HELPER_KILL_AFTER" "$HELPER_TIMEOUT" "$@"; }
+
+usage() {
+  cat <<'USAGE'
+Usage: text-transform [--shift-insert] [--copy-only] <upcase|downcase|capitalize>
+
+Reads the currently highlighted text (primary selection, clipboard as a
+fallback), transforms it, and replaces the highlight in place.
+
+Operations:
+  upcase        EVERY LETTER BECOMES UPPERCASE
+  downcase      every letter becomes lowercase
+  capitalize    The First Letter Of Every Word Is Uppercased
+
+Options:
+  --shift-insert  Paste the result with Shift+Insert instead of typing it
+  --copy-only     Copy the transformed text to the clipboard and do nothing else
+  --get-selection Print the current selection and exit (used by the overlay preview)
+  -h, --help      Show this help and exit
+USAGE
+}
+
+notify() {
+  local title="$1"
+  local message="$2"
+  if command -v omarchy-notification-send >/dev/null 2>&1; then
+    omarchy-notification-send -g "Aa" "$message"
+  elif command -v notify-send >/dev/null 2>&1; then
+    notify-send --app-name="$title" "$title" "$message"
+  fi
+  printf '%s: %s\n' "$title" "$message" >&2
+}
+
+# Highlighted text is the primary selection; fall back to the clipboard when
+# the primary is unset. Nothing is printed when there is no text at all.
+# Each wl-paste call is time-bounded and its output capped at MAX_BYTES so an
+# oversized or stalled clipboard producer can't hang or bloat the pipeline.
+get_selection() {
+  local primary
+  primary="$(run_bounded wl-paste --no-newline --primary 2>/dev/null | head -c "$MAX_BYTES")"
+  [[ -n $primary ]] || primary="$(run_bounded wl-paste --no-newline 2>/dev/null | head -c "$MAX_BYTES")"
+  printf '%s' "$primary"
+}
+
+for arg in "$@"; do
+  case "$arg" in
+    --shift-insert) METHOD="shift-insert" ;;
+    --copy-only) METHOD="copy-only" ;;
+    --get-selection) GET_SELECTION=true ;;
+    upcase | downcase | capitalize) MODE="$arg" ;;
+    -h | --help) usage; exit 0 ;;
+    *) notify "Text Transform" "Unknown argument: $arg" >&2; usage >&2; exit 2 ;;
+  esac
+done
+
+if [[ $GET_SELECTION == true ]]; then
+  get_selection
+  exit 0
+fi
+
+[[ -n $MODE ]] || { usage >&2; exit 2; }
+
+TEXT="$(get_selection)"
+if [[ -z $TEXT ]]; then
+  notify "Text Transform" "Highlight some text first, then try again."
+  exit 1
+fi
+
+OUT="$(printf '%s' "$TEXT" | run_bounded python3 "$TRANSFORM" "$MODE")" || exit 1
+if [[ -z $OUT ]]; then
+  notify "Text Transform" "The selection could not be transformed."
+  exit 1
+fi
+
+printf '%s' "$OUT" | run_bounded wl-copy
+
+if [[ $METHOD == copy-only ]]; then
+  exit 0
+fi
+
+# Wait for the shell to hand keyboard focus back before typing or pasting.
+sleep 0.15
+
+if [[ $METHOD == shift-insert ]]; then
+  run_bounded wtype -M shift -k Insert -m shift 2>/dev/null || true
+else
+  printf '%s' "$OUT" | run_bounded wtype - 2>/dev/null || true
+fi

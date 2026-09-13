@@ -1,33 +1,17 @@
--- Auto-generated border gradient: one accent color per custom theme
--- Active theme: retro-82 (accent #b96564)
--- Palette: 989898,B96564,C6F36B,97BA8B,4ECDC4,2B5E8F ...
--- Combined from all themes in colors.toml (18 stops)
--- Generated: Fri Sep 11 03:45:48 PM EAT 2026
+-- Auto-generated border gradient from theme: oligarchy
+-- Wallpaper: 01-free-software.webp
+-- Accent: #c6f36b
+-- Border source: colors.toml (hyprland_active_border)
+-- Generated: Sat Sep 12 11:12:31 AM EAT 2026
 
 local active_border_color = {
   colors = {
-    "rgba(989898ee)",
-    "rgba(B96564ee)",
-    "rgba(C6F36Bee)",
-    "rgba(97BA8Bee)",
-    "rgba(4ECDC4ee)",
-    "rgba(2B5E8Fee)",
-    "rgba(9099A5ee)",
-    "rgba(5981BBee)",
-    "rgba(89B4FAee)",
-    "rgba(7AA2F7ee)",
-    "rgba(507DE2ee)",
-    "rgba(647AB9ee)",
-    "rgba(6D78B8ee)",
-    "rgba(7675B4ee)",
-    "rgba(7874C9ee)",
-    "rgba(7C77B9ee)",
-    "rgba(9B6B9Fee)",
-    "rgba(8E2D53ee)",
+    "rgba(c6f36bee)",
+    "rgba(55d8ffff)",
   },
-  angle = 135,
+  angle = 45,
 }
-local inactive_border_color = "rgba(090909aa)"
+local inactive_border_color = "rgb(25304a)"
 
 hl.config({
   general = {

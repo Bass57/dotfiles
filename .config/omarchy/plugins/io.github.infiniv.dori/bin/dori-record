@@ -1,0 +1,142 @@
+#!/bin/bash
+# Record the phone's screen to a file, without a mirror window in the way.
+#
+#   dori-record start | stop | toggle | status
+#
+#   --dir ~/Videos/dori   where the files go
+#   --codec h264|h265     video codec (default h264)
+#   --bitrate 20M         video bitrate (default 20M)
+#
+# Stopping sends SIGTERM so scrcpy can finalise the container; a killed
+# recording is an unplayable file.
+
+set -uo pipefail
+
+# shellcheck source=dori-lib.sh
+. "$(dirname "$(readlink -f "$0")")/dori-lib.sh" || exit 1
+
+DIR="${DORI_RECORD_DIR:-$HOME/Videos/dori}"
+CODEC="h264"
+BITRATE="20M"
+RUNDIR=$(dori_rundir) || exit 1
+LOG="$RUNDIR/record.log"
+ACTION=""
+
+while (($# > 0)); do
+  case "$1" in
+    --dir) DIR="${2:-$DIR}"; shift 2 ;;
+    --codec) CODEC="${2:-h264}"; shift 2 ;;
+    --bitrate) BITRATE="${2:-20M}"; shift 2 ;;
+    -h | --help)
+      sed -n '2,13p' "$0"
+      exit 0
+      ;;
+    -*)
+      echo "dori-record: unknown flag $1" >&2
+      exit 1
+      ;;
+    *) ACTION="$1"; shift ;;
+  esac
+done
+ACTION="${ACTION:-toggle}"
+
+# With the cable in and Wi-Fi on at the same time, adb sees two devices and
+# every bare adb call fails with "more than one device". Always name one, and
+# prefer the cable: it is the faster transport and the one just plugged in.
+dori_serial() {
+  [[ -n ${DORI_SERIAL:-} ]] && { echo "$DORI_SERIAL"; return 0; }
+  adb devices 2>/dev/null | awk '
+    NR > 1 && $2 == "device" {
+      if ($1 !~ /:/) { print $1; found = 1; exit }
+      if (!wireless) wireless = $1
+    }
+    END { if (!found && wireless) print wireless }'
+}
+
+notify() { command -v notify-send >/dev/null 2>&1 && notify-send "$@"; }
+
+# The recording Dori owns is the dori-record user unit, and nothing else. A
+# scrcpy with --record= on its command line is not proof of anything: another
+# recording on this login belongs to whoever started it, and stopping it would
+# cost them their video. The unit's Description remembers the output file.
+current_file() {
+  local desc
+  desc=$(dori_unit_description record) || return 1
+  printf '%s\n' "${desc#Dori recording to }"
+}
+
+case "$ACTION" in
+  status)
+    file=$(current_file)
+    jq -n --arg file "${file:-}" \
+      '{recording: ($file != ""), file: (if $file == "" then null else $file end)}'
+    ;;
+  stop)
+    file=$(current_file)
+    if [[ -z $file ]]; then
+      echo "dori-record: no recording started by Dori is running" >&2
+      exit 0
+    fi
+    # systemctl stop sends SIGTERM and waits, so scrcpy gets to write the
+    # container index before this returns and the file is playable by the
+    # time anyone is told where it is.
+    dori_unit_stop record
+    notify "Dori" "Recording saved to $file"
+    echo "$file"
+    ;;
+  start | toggle)
+    if [[ -n "$(current_file)" ]]; then
+      [[ $ACTION == "toggle" ]] && exec "$0" stop --dir "$DIR"
+      echo "dori-record: already recording $(current_file)" >&2
+      exit 0
+    fi
+    dori_require_user_systemd || exit 1
+    serial=$(dori_serial)
+    if [[ -z $serial ]]; then
+      notify -u critical "Dori" "No phone over adb."
+      echo "dori-record: no adb device in state 'device'" >&2
+      exit 1
+    fi
+    mkdir -p "$DIR"
+    out="$DIR/phone-$(date +%Y%m%d-%H%M%S).mp4"
+    : >"$LOG"
+    # Over Wi-Fi scrcpy sometimes cannot push its server to the phone and dies
+    # on the spot. Try once more before calling it a failure.
+    for attempt in 1 2; do
+      dori_unit_start record "$LOG" "Dori recording to $out" \
+        scrcpy -s "$serial" --no-window --no-playback \
+        --record="$out" \
+        --video-codec="$CODEC" --video-bit-rate="$BITRATE" || {
+        echo "dori-record: could not start the dori-record unit" >&2
+        exit 1
+      }
+      sleep 1.2
+      dori_unit_active record && break
+      ((attempt == 1)) && echo "dori-record: scrcpy died on launch, retrying" >&2
+    done
+    # scrcpy pushes its server to the phone before it records anything, and
+    # over Wi-Fi that push sometimes fails outright. Wait for the file to
+    # appear, and treat scrcpy exiting as the failure it is.
+    for _ in {1..24}; do
+      [[ -s $out ]] && break
+      if ! dori_unit_active record; then
+        notify -u critical "Dori" "The recording did not start. See $LOG"
+        echo "dori-record: scrcpy exited before writing anything; see $LOG" >&2
+        rm -f "$out"
+        exit 1
+      fi
+      sleep 0.25
+    done
+    if [[ ! -s $out ]]; then
+      notify -u critical "Dori" "The recording did not start. See $LOG"
+      echo "dori-record: no data after 6s; see $LOG" >&2
+      exit 1
+    fi
+    notify "Dori" "Recording the phone screen"
+    echo "$out"
+    ;;
+  *)
+    echo "Usage: dori-record <start|stop|toggle|status>" >&2
+    exit 1
+    ;;
+esac

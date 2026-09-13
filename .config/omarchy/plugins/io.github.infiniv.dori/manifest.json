@@ -1,0 +1,180 @@
+{
+  "schemaVersion": 1,
+  "id": "io.github.infiniv.dori",
+  "name": "Dori",
+  "version": "1.0.0",
+  "author": "infiniV",
+  "license": "MIT",
+  "description": "Turn an Android phone into a webcam, a screen you can mirror, and a notification source, over USB or Wi-Fi.",
+  "kinds": [
+    "bar-widget"
+  ],
+  "activation": "on-demand",
+  "entryPoints": {
+    "barWidget": "Panel.qml"
+  },
+  "barWidget": {
+    "displayName": "Dori",
+    "description": "One bar icon and one panel: the phone's camera as a real v4l2 webcam, and its screen mirrored here, both over adb.",
+    "category": "System",
+    "aliases": [
+      "dori",
+      "phone"
+    ],
+    "allowMultiple": false,
+    "defaultSection": "right",
+    "defaults": {
+      "codec": "h264",
+      "bitrateMbps": 20,
+      "maxFps": 60,
+      "screenOff": false,
+      "hideWhenAbsent": false,
+      "videoDevice": "/dev/video10",
+      "backCameraId": 0,
+      "frontCameraId": 1,
+      "backRotation": 0,
+      "frontRotation": 0,
+      "cameraMaxSize": 1920,
+      "cameraFps": 30,
+      "livePreview": true,
+      "keyboardMode": "sdk"
+    },
+    "schema": [
+      {
+        "key": "livePreview",
+        "type": "boolean",
+        "label": "Live preview of the phone screen",
+        "defaultValue": true,
+        "description": "Shows a still of the phone's screen beside the controls, refreshed about once a second while the panel is open."
+      },
+      {
+        "key": "videoDevice",
+        "type": "path",
+        "label": "Webcam device",
+        "defaultValue": "/dev/video10",
+        "description": "The v4l2loopback node the camera is streamed into. Must match the one dori-setup made; if you moved it, run `dori-setup --device-number N` with the same number."
+      },
+      {
+        "key": "backCameraId",
+        "type": "integer",
+        "label": "Back camera id",
+        "min": 0,
+        "max": 9,
+        "step": 1,
+        "defaultValue": 0,
+        "description": "Run `scrcpy --list-cameras` if the back and front buttons are swapped."
+      },
+      {
+        "key": "frontCameraId",
+        "type": "integer",
+        "label": "Front camera id",
+        "min": 0,
+        "max": 9,
+        "step": 1,
+        "defaultValue": 1
+      },
+      {
+        "key": "backRotation",
+        "type": "enum",
+        "label": "Back camera rotation",
+        "options": [
+          "0",
+          "90",
+          "180",
+          "270"
+        ],
+        "defaultValue": "0",
+        "description": "Clockwise, for a phone that hands over the back sensor rotated. Set 180 if the picture is upside down. Also on the panel, under CAMERA."
+      },
+      {
+        "key": "frontRotation",
+        "type": "enum",
+        "label": "Front camera rotation",
+        "options": [
+          "0",
+          "90",
+          "180",
+          "270"
+        ],
+        "defaultValue": "0",
+        "description": "The same, for the front sensor. The two are separate because the two are mounted differently."
+      },
+      {
+        "key": "cameraMaxSize",
+        "type": "enum",
+        "label": "Camera resolution",
+        "options": [
+          "1280",
+          "1920",
+          "3840"
+        ],
+        "defaultValue": "1920",
+        "description": "Longest edge of the captured picture: 1280 is 720p, 1920 is 1080p, 3840 is 4K. Higher costs the phone battery and heat for detail most calls scale away again. Also on the panel, under CAMERA."
+      },
+      {
+        "key": "cameraFps",
+        "type": "enum",
+        "label": "Camera frame rate",
+        "options": [
+          "15",
+          "30",
+          "60"
+        ],
+        "defaultValue": "30",
+        "description": "Capture rate for the webcam stream. 30 is what video calls use; 60 is for recording something that moves."
+      },
+      {
+        "key": "codec",
+        "type": "enum",
+        "label": "Mirror codec",
+        "options": [
+          "h264",
+          "h265"
+        ],
+        "defaultValue": "h264"
+      },
+      {
+        "key": "bitrateMbps",
+        "type": "integer",
+        "label": "Mirror bitrate (Mbps)",
+        "min": 4,
+        "max": 60,
+        "step": 2,
+        "defaultValue": 20
+      },
+      {
+        "key": "maxFps",
+        "type": "integer",
+        "label": "Mirror frame rate",
+        "min": 15,
+        "max": 120,
+        "step": 5,
+        "defaultValue": 60
+      },
+      {
+        "key": "keyboardMode",
+        "type": "enum",
+        "label": "Typing into the mirror",
+        "options": [
+          "sdk",
+          "uhid",
+          "disabled"
+        ],
+        "defaultValue": "sdk",
+        "description": "sdk works everywhere. uhid behaves like a real keyboard but types nothing until you set a layout on the phone, under Settings > System > Languages and input > Physical keyboard."
+      },
+      {
+        "key": "screenOff",
+        "type": "boolean",
+        "label": "Blank the phone screen while mirroring",
+        "defaultValue": false
+      },
+      {
+        "key": "hideWhenAbsent",
+        "type": "boolean",
+        "label": "Hide the bar icon when no phone is attached",
+        "defaultValue": false
+      }
+    ]
+  }
+}
