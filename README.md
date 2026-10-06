@@ -15,7 +15,7 @@ the safety net for when you manually reset something (`omarchy refresh`,
 | `.config/ghostty/config` | Ghostty config + enabled custom cursor shader |
 | `.config/ghostty/shaders/` | Cursor smear/trail GLSL shaders (KroneCorylus) + `ghostty-cursor-color.sh` theme-color sync |
 | `.config/hypr/` | Full Hyprland config (bindings, input, monitors, looknfeel, autostart, hyprsunset, ...) |
-| `.config/nvim/lua/plugins/smear-cursor.lua` | LazyVim spec for `sphamba/smear-cursor.nvim` |
+| `.config/nvim/` | LazyVim setup, editor defaults and keymaps, plus custom plugin specs |
 | `.config/omarchy/plugins/bass.menu/` | Cloned menu plugin (`bass.menu`) incl. scroll-position fix in `Menu.qml` |
 | `.config/omarchy/hooks/theme-set.d/` | Theme hooks (incl. `ghostty-cursor-color.sh`) |
 
