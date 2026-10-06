@@ -12,10 +12,10 @@ the safety net for when you manually reset something (`omarchy refresh`,
 
 | Path | What it is |
 |------|-----------|
-| `.config/ghostty/config` | Ghostty config + enabled custom cursor shader |
+| `.config/ghostty/config` | Ghostty config, custom cursor shader, and CSI-u encodings for modified keys |
 | `.config/ghostty/shaders/` | Cursor smear/trail GLSL shaders (KroneCorylus) + `ghostty-cursor-color.sh` theme-color sync |
 | `.config/hypr/` | Full Hyprland config (bindings, input, monitors, looknfeel, autostart, hyprsunset, ...) |
-| `.config/nvim/` | LazyVim setup, editor defaults and keymaps, plus custom plugin specs |
+| `.config/nvim/` | LazyVim setup, editor defaults, modified-key shortcuts, and custom plugin specs |
 | `.config/omarchy/plugins/bass.menu/` | Cloned menu plugin (`bass.menu`) incl. scroll-position fix in `Menu.qml` |
 | `.config/omarchy/hooks/theme-set.d/` | Theme hooks (incl. `ghostty-cursor-color.sh`) |
 
@@ -42,8 +42,14 @@ After you edit any config you want protected:
 ```bash
 git -C ~/dotfiles add -A
 git -C ~/dotfiles commit -m "snapshot"
-git -C ~/dotfiles push
+git -C ~/dotfiles push origin HEAD
 ```
+
+## Neovim word shortcuts
+
+In Insert mode, `Ctrl+Backspace` deletes the previous word, `Ctrl+Delete` deletes
+the next word, and `Ctrl+Left` / `Ctrl+Right` move by word. Ghostty sends
+distinct CSI-u sequences for these keys so Neovim can recognize them.
 
 ## Ghostty cursor shader notes
 
