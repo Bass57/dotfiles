@@ -33,6 +33,11 @@ keybind = control+insert=copy_to_clipboard
 keybind = shift+enter=csi:13;2u
 # Legacy encoding sends Alt+Shift+Enter the same as Alt+Enter; send CSI-u so tmux can match M-S-Enter.
 keybind = alt+shift+enter=csi:13;4u
+# Send distinct CSI-u sequences for modified keys in Neovim.
+keybind = control+backspace=csi:127;5u
+keybind = control+delete=csi:57349;5u
+keybind = control+left=csi:57350;5u
+keybind = control+right=csi:57351;5u
 keybind = super+control+shift+alt+arrow_down=resize_split:down,100
 keybind = super+control+shift+alt+arrow_up=resize_split:up,100
 keybind = super+control+shift+alt+arrow_left=resize_split:left,100
